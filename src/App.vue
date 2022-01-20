@@ -1,21 +1,99 @@
+<template>
+  <h1>Pokedex</h1>
+  <p>Filter pokemon {{pokemonStore.filteredText}}</p>
+  <input type="text" v-model="pokemonStore.filteredText">
+  <ul>
+    <PokedexCard 
+      v-for="pokemon in paginationStore.paginatedList" 
+      :key="pokemon.id"
+      :number="pokemon.id"
+      :name="pokemon.name"
+      />
+  </ul>
+  <div class="pagination">
+    <button  @click="paginationStore.prevPage">Previous Page</button>
+  <h4> {{paginationStore.page}}/{{paginationStore.totalPages}} </h4>
+  <button  @click="paginationStore.nextPage">Next Page</button>
+  </div>
+  
+</template>
+
 <script setup>
-// This starter template is using Vue 3 <script setup> SFCs
-// Check out https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup
-import HelloWorld from './components/HelloWorld.vue'
+import { onMounted, reactive, computed } from 'vue';
+import PokedexCard from './components/PokedexCard.vue';
+onMounted(async () => {
+	const getPokeData = await fetch('https://pokeapi.co/api/v2/pokedex/2/').then(
+		response => response.json()
+	);
+	const pokeData = getPokeData.pokemon_entries
+		? getPokeData.pokemon_entries.map(pokemon => {
+				const pokemonName =
+					pokemon.pokemon_species.name[0].toUpperCase() +
+					pokemon.pokemon_species.name.substring(1);
+				return {
+					id: pokemon.entry_number,
+					name: pokemonName
+				};
+		  })
+		: [];
+	pokemonStore.list = pokeData;
+	console.log(pokeData);
+});
+
+const pokemonStore = reactive({
+	list: [],
+	filteredText: '',
+	filteredList: computed(() =>
+		pokemonStore.list.filter(pokemon =>
+			pokemon.name.toLowerCase().includes(pokemonStore.filteredText)
+		)
+	)
+});
+const paginationStore = reactive({
+	page: 1,
+	limit: 10,
+	start: 0,
+	end: computed(() => paginationStore.start + 10),
+	paginatedList: computed(() =>
+		pokemonStore.filteredList.slice(
+			(paginationStore.page - 1) * paginationStore.limit,
+			paginationStore.page * paginationStore.limit
+		)
+	),
+	totalPages: computed(() =>
+		Math.ceil(pokemonStore.filteredList.length / paginationStore.limit)
+	),
+	nextPage: function() {
+		if (
+			paginationStore.page !==
+			Math.ceil(pokemonStore.filteredList.length / paginationStore.limit)
+		) {
+			paginationStore.page += 1;
+		}
+	},
+	prevPage: function() {
+		if (paginationStore.page !== 1) {
+			paginationStore.page -= 1;
+		}
+	}
+});
 </script>
 
-<template>
-  <img alt="Vue logo" src="./assets/logo.png" />
-  <HelloWorld msg="Hello Vue 3 + Vite" />
-</template>
+
 
 <style>
 #app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
+	font-family: Avenir, Helvetica, Arial, sans-serif;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	text-align: center;
+	color: #2c3e50;
+	margin-top: 60px;
+}
+.pagination {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	column-gap: 1rem;
 }
 </style>
