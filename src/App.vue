@@ -23,10 +23,15 @@
 <script setup>
 import { onMounted, reactive, computed } from 'vue';
 import { useFetch } from '@vueuse/core';
+import usePokemonStore from './composables/usePokemonStore';
+import usePaginationStore from './composables/usePaginationStore';
+
 import PokedexCard from './components/PokedexCard.vue';
 
 const pokeAPI = 'https://pokeapi.co/api/v2/pokedex/2/';
 
+const { pokemonStore } = usePokemonStore();
+const { paginationStore } = usePaginationStore(pokemonStore);
 onMounted(async () => {
 	try {
 		console.log('trying');
@@ -55,47 +60,6 @@ onMounted(async () => {
 		pokemonStore.loading = isFetching;
 		pokemonStore.error = error;
 		pokemonStore.errorMsg = error.message;
-	}
-});
-
-const pokemonStore = reactive({
-	list: [],
-	error: null,
-	errorMsg: '',
-	loading: false,
-	filteredText: '',
-	filteredList: computed(() =>
-		pokemonStore.list.filter(pokemon =>
-			pokemon.name.toLowerCase().includes(pokemonStore.filteredText)
-		)
-	)
-});
-const paginationStore = reactive({
-	page: 1,
-	limit: 10,
-	start: 0,
-	end: computed(() => paginationStore.start + 10),
-	paginatedList: computed(() =>
-		pokemonStore.filteredList.slice(
-			(paginationStore.page - 1) * paginationStore.limit,
-			paginationStore.page * paginationStore.limit
-		)
-	),
-	totalPages: computed(() =>
-		Math.ceil(pokemonStore.filteredList.length / paginationStore.limit)
-	),
-	nextPage: function() {
-		if (
-			paginationStore.page !==
-			Math.ceil(pokemonStore.filteredList.length / paginationStore.limit)
-		) {
-			paginationStore.page += 1;
-		}
-	},
-	prevPage: function() {
-		if (paginationStore.page !== 1) {
-			paginationStore.page -= 1;
-		}
 	}
 });
 </script>
