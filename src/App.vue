@@ -1,4 +1,5 @@
 <template>
+  <div v-if="pokemonStore.loading"><h1>Loading...</h1></div>
   <h1>Pokedex</h1>
   <p>Filter pokemon {{pokemonStore.filteredText}}</p>
   <input type="text" v-model="pokemonStore.filteredText">
@@ -15,33 +16,53 @@
   <h4> {{paginationStore.page}}/{{paginationStore.totalPages}} </h4>
   <button  @click="paginationStore.nextPage">Next Page</button>
   </div>
-  
+    
+
 </template>
 
 <script setup>
 import { onMounted, reactive, computed } from 'vue';
+import { useFetch } from '@vueuse/core';
 import PokedexCard from './components/PokedexCard.vue';
+
+const pokeAPI = 'https://pokeapi.co/api/v2/pokedex/2/';
+
 onMounted(async () => {
-	const getPokeData = await fetch('https://pokeapi.co/api/v2/pokedex/2/').then(
-		response => response.json()
-	);
-	const pokeData = getPokeData.pokemon_entries
-		? getPokeData.pokemon_entries.map(pokemon => {
-				const pokemonName =
-					pokemon.pokemon_species.name[0].toUpperCase() +
-					pokemon.pokemon_species.name.substring(1);
-				return {
-					id: pokemon.entry_number,
-					name: pokemonName
-				};
-		  })
-		: [];
-	pokemonStore.list = pokeData;
-	console.log(pokeData);
+	try {
+		console.log('trying');
+		pokemonStore.loading = true;
+		const { isFetching, error, data } = await useFetch(pokeAPI)
+			.get()
+			.json();
+		const fetchedData = await data.value.pokemon_entries;
+		console.log('data', fetchedData);
+		pokemonStore.loading = isFetching;
+		const pokeData = (await fetchedData)
+			? fetchedData.map(pokemon => {
+					const pokemonName =
+						pokemon.pokemon_species.name[0].toUpperCase() +
+						pokemon.pokemon_species.name.substring(1);
+					return {
+						id: pokemon.entry_number,
+						name: pokemonName
+					};
+			  })
+			: [];
+		pokemonStore.list = pokeData;
+		return;
+	} catch (err) {
+		console.log(err);
+		pokemonStore.loading = isFetching;
+		pokemonStore.error = error;
+		pokemonStore.errorMsg = error.message;
+	}
 });
 
 const pokemonStore = reactive({
 	list: [],
+	error: null,
+	errorMsg: '',
+	loading: false,
 	filteredText: '',
 	filteredList: computed(() =>
 		pokemonStore.list.filter(pokemon =>
